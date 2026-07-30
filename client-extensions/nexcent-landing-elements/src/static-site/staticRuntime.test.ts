@@ -1,6 +1,6 @@
 import {describe, expect, it} from 'vitest';
 
-import {liferayElementNames} from './registerStaticElements';
+import {liferayElementNames} from './registerLiferayElements';
 import {normalizeStaticCss} from './shell/StaticStyleBoundary';
 
 describe('Nexcent Liferay React runtime', () => {
