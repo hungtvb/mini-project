@@ -6,7 +6,10 @@ const config: StorybookConfig = {
         name: '@storybook/react-vite',
         options: {},
     },
-    stories: ['../src/**/*.stories.@(js|jsx|mjs|ts|tsx)'],
+    stories: [
+        '../src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+        '../../../packages/nexcent-ui/src/**/*.stories.@(js|jsx|mjs|ts|tsx)',
+    ],
 };
 
 export default config;
