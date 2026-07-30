@@ -1,7 +1,7 @@
 import React, {type ReactNode} from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 
-import {GlobalModal} from '../components/GlobalModal/GlobalModal';
+import {NxcGlobalModal} from '../components/GlobalModal/GlobalModal';
 import {NxcClients} from './sections/Clients';
 import {NxcCommunity} from './sections/Community';
 import {NxcCta} from './sections/Cta';
@@ -103,5 +103,7 @@ export function registerLiferayElements() {
     registerShadowReactElement('nexcent-react-footer', (element) => (
         <NxcFooter host={element} />
     ));
-    registerShadowReactElement('nexcent-global-modal', () => <GlobalModal />);
+    registerShadowReactElement('nexcent-global-modal', () => (
+        <NxcGlobalModal />
+    ));
 }
