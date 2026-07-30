@@ -6,18 +6,18 @@ import {
 } from '../headless/headlessContentClient';
 import {readLocale, readStringSetting} from '../runtime/fragmentSettings';
 
-export type HeroSourceState =
+export type NxcHeroSourceState =
     | {status: 'loading'}
     | {status: 'ready'; contents: HeadlessStructuredContent[]}
     | {status: 'empty'}
     | {status: 'error'; error: Error};
 
-export function useHeroSources(
+export function useNxcHeroSources(
     host: HTMLElement | undefined,
     maxItems: number,
     structureIdentifier: string
-): HeroSourceState {
-    const [state, setState] = useState<HeroSourceState>({status: 'loading'});
+): NxcHeroSourceState {
+    const [state, setState] = useState<NxcHeroSourceState>({status: 'loading'});
 
     useEffect(() => {
         if (!host) {
