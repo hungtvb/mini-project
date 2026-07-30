@@ -1,9 +1,9 @@
 name: Nexcent Liferay Runtime Verification
 
 on:
-  push:
+  pull_request:
     branches:
-      - refactor/nexcent-ui-boundary
+      - main
     paths:
       - .github/workflows/nexcent-liferay-runtime.yml
       - client-extensions/nexcent-landing-elements/**
