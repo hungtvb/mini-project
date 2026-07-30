@@ -6,13 +6,13 @@ import {
     readStringSetting,
 } from '../runtime/fragmentSettings';
 import {mapNxcHeroProps} from './Hero.mapping';
-import {useHeroSources} from './Hero.sources';
+import {useNxcHeroSources} from './Hero.sources';
 
 type HeroAdapterProps = {
     host?: HTMLElement;
 };
 
-export function StaticHero({host}: HeroAdapterProps) {
+export function NxcHero({host}: HeroAdapterProps) {
     const structureIdentifier = readStringSetting(
         host,
         'structure-identifier',
@@ -22,7 +22,11 @@ export function StaticHero({host}: HeroAdapterProps) {
         max: 10,
         min: 1,
     });
-    const sourceState = useHeroSources(host, maxSlides, structureIdentifier);
+    const sourceState = useNxcHeroSources(
+        host,
+        maxSlides,
+        structureIdentifier
+    );
 
     if (sourceState.status === 'error') {
         console.error('[NxcHero] Failed to load Hero content.', sourceState.error);
