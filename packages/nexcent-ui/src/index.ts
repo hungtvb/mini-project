@@ -1,5 +1,6 @@
 export * from './components/Clients/Clients';
 export * from './components/Community/Community';
+export * from './components/ContactForm/ContactForm';
 export * from './components/Cta/Cta';
 export * from './components/Feature/Feature';
 export * from './components/Hero/Hero';
