@@ -2,24 +2,22 @@ import React, {type ReactNode} from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 
 import {GlobalModal} from '../components/GlobalModal/GlobalModal';
-import {StaticClients} from './sections/Clients';
-import {StaticCommunity} from './sections/Community';
-import {StaticCta} from './sections/Cta';
-import {StaticFeature} from './sections/Feature';
-import {StaticHero} from './sections/Hero';
-import {StaticMarketing} from './sections/Marketing';
-import {StaticStatistics} from './sections/Statistics';
-import {StaticTestimonial} from './sections/Testimonial';
-import {StaticFooter} from './shell/Footer';
-import {StaticHeader} from './shell/Header';
-import {StaticPage} from './StaticPage';
+import {StaticClients as NxcClients} from './sections/Clients';
+import {StaticCommunity as NxcCommunity} from './sections/Community';
+import {StaticCta as NxcCta} from './sections/Cta';
+import {StaticFeature as NxcFeature} from './sections/Feature';
+import {StaticHero as NxcHero} from './sections/Hero';
+import {StaticMarketing as NxcMarketing} from './sections/Marketing';
+import {StaticStatistics as NxcStatistics} from './sections/Statistics';
+import {StaticTestimonial as NxcTestimonial} from './sections/Testimonial';
+import {StaticFooter as NxcFooter} from './shell/Footer';
+import {StaticHeader as NxcHeader} from './shell/Header';
 import {StaticRuntimeOverrides} from './shell/StaticRuntimeOverrides';
 import {StaticStyleBoundary} from './shell/StaticStyleBoundary';
 
-type StaticRenderer = (element: HTMLElement) => ReactNode;
+type LiferayRenderer = (element: HTMLElement) => ReactNode;
 
-export const staticElementNames = [
-    'nexcent-react-page',
+export const liferayElementNames = [
     'nexcent-react-header',
     'nexcent-react-hero',
     'nexcent-react-clients',
@@ -34,12 +32,12 @@ export const staticElementNames = [
     'nexcent-global-modal',
 ] as const;
 
-function registerShadowReactElement(name: string, renderer: StaticRenderer) {
+function registerShadowReactElement(name: string, renderer: LiferayRenderer) {
     if (customElements.get(name)) {
         return;
     }
 
-    class NexcentStaticReactElement extends HTMLElement {
+    class NexcentLiferayReactElement extends HTMLElement {
         private root?: Root;
 
         connectedCallback() {
@@ -68,43 +66,42 @@ function registerShadowReactElement(name: string, renderer: StaticRenderer) {
         }
     }
 
-    customElements.define(name, NexcentStaticReactElement);
+    customElements.define(name, NexcentLiferayReactElement);
 }
 
-export function registerStaticElements() {
-    registerShadowReactElement('nexcent-react-page', () => <StaticPage />);
+export function registerLiferayElements() {
     registerShadowReactElement('nexcent-react-header', (element) => (
-        <StaticHeader host={element} />
+        <NxcHeader host={element} />
     ));
     registerShadowReactElement('nexcent-react-hero', (element) => (
-        <StaticHero host={element} />
+        <NxcHero host={element} />
     ));
     registerShadowReactElement('nexcent-react-clients', (element) => (
-        <StaticClients host={element} />
+        <NxcClients host={element} />
     ));
     registerShadowReactElement('nexcent-react-community', (element) => (
-        <StaticCommunity host={element} />
+        <NxcCommunity host={element} />
     ));
     registerShadowReactElement('nexcent-react-feature-primary', (element) => (
-        <StaticFeature featureKey="primary" host={element} />
+        <NxcFeature featureKey="primary" host={element} />
     ));
     registerShadowReactElement('nexcent-react-statistics', (element) => (
-        <StaticStatistics host={element} />
+        <NxcStatistics host={element} />
     ));
     registerShadowReactElement('nexcent-react-feature-secondary', (element) => (
-        <StaticFeature featureKey="secondary" host={element} />
+        <NxcFeature featureKey="secondary" host={element} />
     ));
     registerShadowReactElement('nexcent-react-testimonial', (element) => (
-        <StaticTestimonial host={element} />
+        <NxcTestimonial host={element} />
     ));
     registerShadowReactElement('nexcent-react-marketing', (element) => (
-        <StaticMarketing host={element} />
+        <NxcMarketing host={element} />
     ));
     registerShadowReactElement('nexcent-react-cta', (element) => (
-        <StaticCta host={element} />
+        <NxcCta host={element} />
     ));
     registerShadowReactElement('nexcent-react-footer', (element) => (
-        <StaticFooter host={element} />
+        <NxcFooter host={element} />
     ));
     registerShadowReactElement('nexcent-global-modal', () => <GlobalModal />);
 }
