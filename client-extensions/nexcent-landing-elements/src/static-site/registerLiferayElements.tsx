@@ -12,7 +12,7 @@ import {NxcStatistics} from './sections/Statistics';
 import {NxcTestimonial} from './sections/Testimonial';
 import {NxcFooter} from './shell/Footer';
 import {NxcHeader} from './shell/Header';
-import {LiferayRuntimeOverrides} from './shell/StaticRuntimeOverrides';
+import {LiferayRuntimeOverrides} from './shell/LiferayRuntimeOverrides';
 import {StaticStyleBoundary} from './shell/StaticStyleBoundary';
 
 type LiferayRenderer = (element: HTMLElement) => ReactNode;
