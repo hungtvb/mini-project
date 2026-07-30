@@ -27,8 +27,8 @@ jobs:
           node-version: 20.19.0
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install refreshed dependencies
+        run: npm install --ignore-scripts
 
       - name: Typecheck shared UI
         run: npm run typecheck --workspace @nexcent/ui
