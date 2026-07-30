@@ -55,6 +55,7 @@ jobs:
 
       - name: Initialize clean Liferay DXP 2026.Q1.1 LTS bundle
         run: |
+          chmod +x gradlew
           sed -i 's/^liferay.workspace.product=.*/liferay.workspace.product=dxp-2026.q1.1-lts/' gradle.properties
           ./gradlew initBundle --no-daemon --stacktrace
 
