@@ -34,7 +34,7 @@ function handleNavigation(
     window.history.replaceState(null, '', item.url);
 }
 
-export function StaticHeader({host}: HeaderAdapterProps) {
+export function NxcHeader({host}: HeaderAdapterProps) {
     const sourceState = readNxcHeaderSources(host);
 
     if (sourceState.status === 'error') {
