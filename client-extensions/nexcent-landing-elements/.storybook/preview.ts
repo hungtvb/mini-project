@@ -1,7 +1,7 @@
 import type {Preview} from '@storybook/react-vite';
 import {createElement} from 'react';
 
-import {StaticRuntimeOverrides} from '../src/static-site/shell/StaticRuntimeOverrides';
+import {LiferayRuntimeOverrides} from '../src/static-site/shell/StaticRuntimeOverrides';
 import {StaticStyleBoundary} from '../src/static-site/shell/StaticStyleBoundary';
 
 const preview: Preview = {
@@ -11,7 +11,7 @@ const preview: Preview = {
                 StaticStyleBoundary,
                 null,
                 createElement(
-                    StaticRuntimeOverrides,
+                    LiferayRuntimeOverrides,
                     null,
                     createElement(Story)
                 )
