@@ -26,7 +26,7 @@ const COMMUNITY_ITEM_PROPS = {
     'data-nxc-modal': COMMUNITY_MODAL_RULE,
 } as ButtonHTMLAttributes<HTMLButtonElement>;
 
-export function StaticCommunity({host}: HostProps) {
+export function NxcCommunity({host}: HostProps) {
     const structureIdentifier = readStringSetting(
         host,
         'structure-identifier',
