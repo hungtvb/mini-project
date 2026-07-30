@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+concurrency:
+  cancel-in-progress: true
+  group: nexcent-refactor-${{ github.ref }}
+
 permissions:
   contents: write
 
