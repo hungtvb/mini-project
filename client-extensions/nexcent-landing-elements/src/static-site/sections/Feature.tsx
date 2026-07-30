@@ -16,7 +16,7 @@ type FeatureAdapterProps = HostProps & {
     featureKey: FeatureKey;
 };
 
-export function StaticFeature({featureKey, host}: FeatureAdapterProps) {
+export function NxcFeature({featureKey, host}: FeatureAdapterProps) {
     const props = mapNxcFeatureProps(
         readNxcFeatureSources(featureKey, host)
     );
