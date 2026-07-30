@@ -2,17 +2,17 @@ import React, {type ReactNode} from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 
 import {GlobalModal} from '../components/GlobalModal/GlobalModal';
-import {StaticClients as NxcClients} from './sections/Clients';
-import {StaticCommunity as NxcCommunity} from './sections/Community';
-import {StaticCta as NxcCta} from './sections/Cta';
-import {StaticFeature as NxcFeature} from './sections/Feature';
-import {StaticHero as NxcHero} from './sections/Hero';
-import {StaticMarketing as NxcMarketing} from './sections/Marketing';
-import {StaticStatistics as NxcStatistics} from './sections/Statistics';
-import {StaticTestimonial as NxcTestimonial} from './sections/Testimonial';
-import {StaticFooter as NxcFooter} from './shell/Footer';
-import {StaticHeader as NxcHeader} from './shell/Header';
-import {StaticRuntimeOverrides} from './shell/StaticRuntimeOverrides';
+import {NxcClients} from './sections/Clients';
+import {NxcCommunity} from './sections/Community';
+import {NxcCta} from './sections/Cta';
+import {NxcFeature} from './sections/Feature';
+import {NxcHero} from './sections/Hero';
+import {NxcMarketing} from './sections/Marketing';
+import {NxcStatistics} from './sections/Statistics';
+import {NxcTestimonial} from './sections/Testimonial';
+import {NxcFooter} from './shell/Footer';
+import {NxcHeader} from './shell/Header';
+import {LiferayRuntimeOverrides} from './shell/StaticRuntimeOverrides';
 import {StaticStyleBoundary} from './shell/StaticStyleBoundary';
 
 type LiferayRenderer = (element: HTMLElement) => ReactNode;
@@ -52,9 +52,9 @@ function registerShadowReactElement(name: string, renderer: LiferayRenderer) {
             this.root.render(
                 <React.StrictMode>
                     <StaticStyleBoundary>
-                        <StaticRuntimeOverrides>
+                        <LiferayRuntimeOverrides>
                             {renderer(this)}
-                        </StaticRuntimeOverrides>
+                        </LiferayRuntimeOverrides>
                     </StaticStyleBoundary>
                 </React.StrictMode>
             );
