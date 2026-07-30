@@ -9,7 +9,7 @@ type HostProps = {
     host?: HTMLElement;
 };
 
-export function StaticTestimonial({host}: HostProps) {
+export function NxcTestimonial({host}: HostProps) {
     const props = mapNxcTestimonialProps(readNxcTestimonialSources(host));
 
     if (!props.quote || !props.author || !props.image.src) {
