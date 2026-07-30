@@ -9,7 +9,7 @@ const RUNTIME_OVERRIDES = `
     line-height: 1.42;
 }
 
-/* Reproduce the Swiper geometry used by the static reference without its CDN. */
+/* Reproduce the Swiper geometry used by the reference layout without its CDN. */
 .swiper-wrapper {
     display: flex;
     height: 100%;
@@ -23,7 +23,7 @@ const RUNTIME_OVERRIDES = `
     width: 100%;
 }
 
-/* Keep the original clipped navigation underline without blocking nested menus. */
+/* Keep the clipped navigation underline without blocking nested menus. */
 .header__navigation-list > li {
     overflow: hidden !important;
 }
@@ -36,7 +36,7 @@ const RUNTIME_OVERRIDES = `
     display: none;
 }
 
-/* The reference footer has no reserved message row before a form status exists. */
+/* The footer reserves no message row before a form status exists. */
 .footer__form-status--idle {
     display: none;
     margin-top: 0;
@@ -44,7 +44,7 @@ const RUNTIME_OVERRIDES = `
 }
 `;
 
-export function StaticRuntimeOverrides({children}: {children: ReactNode}) {
+export function LiferayRuntimeOverrides({children}: {children: ReactNode}) {
     return (
         <>
             <style>{RUNTIME_OVERRIDES}</style>
