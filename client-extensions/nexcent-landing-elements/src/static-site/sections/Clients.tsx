@@ -7,7 +7,7 @@ type HostProps = {
     host?: HTMLElement;
 };
 
-export function StaticClients({host}: HostProps) {
+export function NxcClients({host}: HostProps) {
     const props = mapNxcClientsProps(readNxcClientsSources(host));
 
     return <Clients {...props} />;
