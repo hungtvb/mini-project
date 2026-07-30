@@ -2,7 +2,7 @@ import React, {type ReactNode} from 'react';
 import {createRoot, type Root} from 'react-dom/client';
 
 import {fragmentComponentMappings} from './mapping';
-import {registerLiferayElements} from './static-site/registerStaticElements';
+import {registerLiferayElements} from './static-site/registerLiferayElements';
 
 type ElementRenderer = (element: HTMLElement) => ReactNode;
 
