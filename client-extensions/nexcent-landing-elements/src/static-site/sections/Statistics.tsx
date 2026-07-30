@@ -7,7 +7,7 @@ type HostProps = {
     host?: HTMLElement;
 };
 
-export function StaticStatistics({host}: HostProps) {
+export function NxcStatistics({host}: HostProps) {
     const props = mapNxcStatisticsProps(readNxcStatisticsSources(host));
 
     return <Statistics {...props} />;
