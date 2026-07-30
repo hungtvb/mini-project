@@ -35,7 +35,7 @@ function handleNavigation(
     window.history.replaceState(null, '', item.url);
 }
 
-export function StaticFooter({host}: FooterAdapterProps) {
+export function NxcFooter({host}: FooterAdapterProps) {
     const sourceState = readNxcFooterSources(host);
 
     if (sourceState.status === 'error') {
