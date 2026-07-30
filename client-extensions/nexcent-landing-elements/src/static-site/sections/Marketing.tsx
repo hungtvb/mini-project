@@ -8,7 +8,7 @@ type HostProps = {
     host?: HTMLElement;
 };
 
-export function StaticMarketing({host}: HostProps) {
+export function NxcMarketing({host}: HostProps) {
     const structureIdentifier = readStringSetting(
         host,
         'structure-identifier',
