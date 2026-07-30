@@ -7,7 +7,7 @@ type HostProps = {
     host?: HTMLElement;
 };
 
-export function StaticCta({host}: HostProps) {
+export function NxcCta({host}: HostProps) {
     const props = mapNxcCtaProps(readNxcCtaSources(host));
 
     return <Cta {...props} />;
