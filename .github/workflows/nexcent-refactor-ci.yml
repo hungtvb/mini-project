@@ -28,7 +28,9 @@ jobs:
           cache: npm
 
       - name: Install refreshed dependencies
-        run: npm install --ignore-scripts
+        run: |
+          rm -f package-lock.json
+          npm install --ignore-scripts
 
       - name: Typecheck shared UI
         run: npm run typecheck --workspace @nexcent/ui
