@@ -1,4 +1,4 @@
-name: Nexcent Liferay Runtime Verification
+name: Nexcent Full Liferay Setup Verification
 
 on:
   pull_request:
@@ -6,30 +6,34 @@ on:
       - main
     paths:
       - .github/workflows/nexcent-liferay-runtime.yml
-      - client-extensions/nexcent-landing-elements/**
-      - packages/nexcent-ui/**
-      - scripts/liferay-runtime.spec.ts
-      - package.json
-      - package-lock.json
+      - build.gradle
       - gradle.properties
       - settings.gradle
+      - configs/**
+      - client-extensions/**
+      - modules/**
+      - packages/**
+      - scripts/**
+      - package.json
+      - package-lock.json
   workflow_dispatch:
 
 concurrency:
   cancel-in-progress: true
-  group: nexcent-liferay-runtime-${{ github.ref }}
+  group: nexcent-full-liferay-${{ github.ref }}
 
 permissions:
   contents: read
 
 jobs:
-  runtime-smoke:
-    name: Clean Liferay runtime smoke
+  full-setup-smoke:
+    name: DXP 2026.Q2.8 full setup smoke
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 70
 
     env:
-      LIFERAY_BASE_URL: http://nexcent.com:8080
+      NO_PROXY: localhost,127.0.0.1
+      no_proxy: localhost,127.0.0.1
 
     steps:
       - uses: actions/checkout@v4
@@ -44,28 +48,78 @@ jobs:
           cache: npm
           node-version: 20.19.0
 
+      - name: Resolve Nexcent runtime configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          product=$(awk -F= '/^liferay.workspace.product=/{print $2}' gradle.properties | xargs)
+          if [[ "$product" != "dxp-2026.q2.8" ]]; then
+            echo "Expected liferay.workspace.product=dxp-2026.q2.8, found: $product"
+            exit 1
+          fi
+
+          web_id=$(awk -F= '/^nexcent.fragments.company.web.id=/{print $2}' gradle.properties | xargs)
+          if [[ -z "$web_id" ]]; then
+            web_id="nexcent.com"
+          fi
+
+          echo "LIFERAY_PRODUCT=$product" >> "$GITHUB_ENV"
+          echo "NEXCENT_WEB_ID=$web_id" >> "$GITHUB_ENV"
+          echo "LIFERAY_BASE_URL=http://$web_id:8080" >> "$GITHUB_ENV"
+          echo "LIFERAY_ADMIN_EMAIL=admin@$web_id" >> "$GITHUB_ENV"
+          echo "NO_PROXY=localhost,127.0.0.1,$web_id" >> "$GITHUB_ENV"
+          echo "no_proxy=localhost,127.0.0.1,$web_id" >> "$GITHUB_ENV"
+
+          echo "Product: $product"
+          echo "Company web ID: $web_id"
+
+      - name: Inventory current setup assets
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo '=== Client extensions ==='
+          find client-extensions -maxdepth 4 -type f \
+            \( -name 'client-extension.yaml' -o -name '*.batch-engine-data.json' \) \
+            -print | sort
+
+          echo '=== OSGi modules ==='
+          find modules -maxdepth 5 -type f \
+            \( -name 'bnd.bnd' -o -name 'service.xml' -o -name 'rest-config.yaml' \) \
+            -print | sort
+
+          echo '=== Metric seed references ==='
+          grep -R --line-number --fixed-strings 'NXC_METRIC_MEMBERS' \
+            client-extensions modules || true
+
       - name: Install workspace dependencies
         run: npm ci
 
-      - name: Build Nexcent UI and landing client extension
+      - name: Validate frontend workspaces
         run: |
           npm run typecheck --workspace @nexcent/ui
           npm run typecheck --workspace @nexcent/landing-elements
+          npm test --workspace @nexcent/landing-elements -- --run
           npm run build --workspace @nexcent/landing-elements
+          npm run build-storybook --workspace @nexcent/landing-elements
 
-      - name: Initialize clean Liferay DXP 2026.Q1.1 LTS bundle
+      - name: Initialize clean Liferay DXP 2026.Q2.8 bundle
         run: |
           chmod +x gradlew
-          sed -i 's/^liferay.workspace.product=.*/liferay.workspace.product=dxp-2026.q1.1-lts/' gradle.properties
           ./gradlew initBundle --no-daemon --stacktrace
 
-      - name: Configure unattended local portal
+      - name: Configure unattended Nexcent company
+        shell: bash
         run: |
-          echo '127.0.0.1 nexcent.com' | sudo tee -a /etc/hosts
-          cat > bundles/portal-ext.properties <<'EOF'
+          set -euo pipefail
+
+          echo "127.0.0.1 $NEXCENT_WEB_ID" | sudo tee -a /etc/hosts
+
+          cat > bundles/portal-ext.properties <<EOF
           company.default.locale=en_US
           company.default.name=Nexcent
-          company.default.web.id=nexcent.com
+          company.default.web.id=$NEXCENT_WEB_ID
           company.security.auth.type=emailAddress
           company.security.strangers=false
           default.admin.email.address.prefix=admin
@@ -78,11 +132,21 @@ jobs:
           users.reminder.queries.enabled=false
           EOF
 
-      - name: Package and stage the client extension
+          mkdir -p build/nexcent-full-setup/config
+          cp bundles/portal-ext.properties \
+            build/nexcent-full-setup/config/portal-ext.properties
+          cp gradle.properties build/nexcent-full-setup/gradle.properties
+
+      - name: Build and stage the complete workspace
         run: |
-          ./gradlew :client-extensions:nexcent-landing-elements:deploy --no-daemon --stacktrace
-          echo 'Files staged for Liferay deployment:'
-          find bundles/deploy -maxdepth 2 -type f -print | sort
+          ./gradlew deploy --no-daemon --stacktrace
+
+          echo '=== Files staged for Liferay deployment ==='
+          find bundles/deploy -maxdepth 2 -type f -print | sort | tee staged-deploy-files.txt
+
+          mkdir -p build/nexcent-full-setup/deploy
+          cp -R bundles/deploy/. build/nexcent-full-setup/deploy/
+          cp staged-deploy-files.txt build/nexcent-full-setup/
 
       - name: Start Liferay
         run: |
@@ -92,15 +156,19 @@ jobs:
           echo $! > liferay-runtime.pid
 
       - name: Wait for portal startup
+        shell: bash
         run: |
-          for attempt in $(seq 1 180); do
+          set -euo pipefail
+
+          for attempt in $(seq 1 240); do
             if ! kill -0 "$(cat liferay-runtime.pid)" 2>/dev/null; then
               echo 'Liferay process exited before startup.'
-              tail -n 300 liferay-runtime.log
+              tail -n 400 liferay-runtime.log
               exit 1
             fi
 
-            status=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            status=$(curl --noproxy '*' --silent --output /dev/null \
+              --write-out '%{http_code}' \
               "$LIFERAY_BASE_URL/c/portal/login" || true)
 
             if [[ "$status" == '200' || "$status" == '302' || "$status" == '303' ]]; then
@@ -110,49 +178,104 @@ jobs:
 
             if (( attempt % 12 == 0 )); then
               echo "Still waiting for Liferay (attempt $attempt, HTTP $status)..."
-              tail -n 40 liferay-runtime.log || true
+              tail -n 60 liferay-runtime.log || true
             fi
 
             sleep 10
           done
 
           echo 'Timed out waiting for Liferay.'
-          tail -n 400 liferay-runtime.log
+          tail -n 500 liferay-runtime.log
           exit 1
 
-      - name: Wait for Nexcent global JS resource
+      - name: Wait for Nexcent deployments
+        shell: bash
         run: |
-          candidates=(
+          set -euo pipefail
+
+          runtime_paths=(
             '/o/nexcent-react-runtime/index.js'
             '/o/nexcent-landing-elements/index.js'
           )
 
-          for attempt in $(seq 1 120); do
-            for path in "${candidates[@]}"; do
-              if curl --fail --silent --show-error \
-                "$LIFERAY_BASE_URL$path" \
-                --output nexcent-runtime.js; then
+          for attempt in $(seq 1 180); do
+            runtime_ready=false
+
+            for path in "${runtime_paths[@]}"; do
+              if curl --noproxy '*' --fail --silent --show-error \
+                "$LIFERAY_BASE_URL$path" --output nexcent-runtime.js; then
                 if grep -q 'nexcent-react-header' nexcent-runtime.js; then
                   echo "NEXCENT_RUNTIME_URL=$LIFERAY_BASE_URL$path" >> "$GITHUB_ENV"
-                  echo "Nexcent runtime is available at $path."
-                  exit 0
+                  runtime_ready=true
+                  break
                 fi
               fi
             done
 
+            contact_status=$(curl --noproxy '*' --silent --output captcha.json \
+              --write-out '%{http_code}' \
+              "$LIFERAY_BASE_URL/o/captcha/v1.0/captcha/challenge" || true)
+
+            object_status=$(curl --noproxy '*' --silent --output metrics.json \
+              --write-out '%{http_code}' \
+              --user "$LIFERAY_ADMIN_EMAIL:learn" \
+              "$LIFERAY_BASE_URL/o/c/nxcmetricssnapshots?pageSize=20" || true)
+
+            if [[ "$runtime_ready" == 'true' && "$contact_status" == '200' && "$object_status" == '200' ]]; then
+              echo 'React runtime, CAPTCHA API, and Metrics Object API are ready.'
+              exit 0
+            fi
+
             if (( attempt % 12 == 0 )); then
-              echo "Still waiting for the Nexcent client extension (attempt $attempt)..."
-              grep -i -E 'nexcent|client extension|ERROR|Exception' liferay-runtime.log | tail -n 80 || true
+              echo "Waiting for deployments: runtime=$runtime_ready captcha=$contact_status metrics=$object_status"
+              grep -i -E 'nexcent|client extension|batch|ERROR|Exception' \
+                liferay-runtime.log | tail -n 120 || true
             fi
 
             sleep 5
           done
 
-          echo 'Nexcent global JS resource was not published.'
-          find bundles -maxdepth 5 -type f \
-            \( -iname '*nexcent*' -o -iname '*client-extension*' \) -print | sort || true
-          tail -n 400 liferay-runtime.log
+          echo 'Nexcent deployments did not become ready.'
+          tail -n 500 liferay-runtime.log
           exit 1
+
+      - name: Verify object definitions and metric seed entries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const response = JSON.parse(fs.readFileSync('metrics.json', 'utf8'));
+          const expected = new Set([
+            'NXC_METRIC_MEMBERS',
+            'NXC_METRIC_CLUBS',
+            'NXC_METRIC_EVENT_BOOKINGS',
+            'NXC_METRIC_PAYMENTS',
+          ]);
+
+          for (const item of response.items ?? []) {
+            expected.delete(item.externalReferenceCode);
+          }
+
+          if (expected.size > 0) {
+            throw new Error(`Missing metric seed entries: ${[...expected].join(', ')}`);
+          }
+
+          console.log('All four metric seed entries are available.');
+          NODE
+
+          contact_definition_status=$(curl --noproxy '*' --silent --output contact-object.json \
+            --write-out '%{http_code}' \
+            --user "$LIFERAY_ADMIN_EMAIL:learn" \
+            "$LIFERAY_BASE_URL/o/headless-admin-user/v1.0/my-user-account" || true)
+
+          if [[ "$contact_definition_status" != '200' ]]; then
+            echo "Admin authentication smoke failed with HTTP $contact_definition_status."
+            cat contact-object.json || true
+            exit 1
+          fi
 
       - name: Install Playwright Chromium
         run: |
@@ -165,16 +288,41 @@ jobs:
           --reporter=line
           --workers=1
 
-      - name: Upload Liferay runtime evidence
+      - name: Prepare downloadable full setup artifact
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p build/nexcent-full-setup/evidence
+          cp liferay-runtime.log build/nexcent-full-setup/evidence/ 2>/dev/null || true
+          cp nexcent-runtime.js build/nexcent-full-setup/evidence/ 2>/dev/null || true
+          cp captcha.json build/nexcent-full-setup/evidence/ 2>/dev/null || true
+          cp metrics.json build/nexcent-full-setup/evidence/ 2>/dev/null || true
+          cp -R test-results build/nexcent-full-setup/evidence/ 2>/dev/null || true
+
+          cat > build/nexcent-full-setup/README.txt <<EOF
+          Nexcent full setup package
+          ==========================
+          Liferay product: $LIFERAY_PRODUCT
+          Company web ID: $NEXCENT_WEB_ID
+          Java: 21
+          Node: 20.19.0
+
+          Contents:
+          - config/: unattended portal configuration
+          - deploy/: all workspace artifacts staged by Gradle
+          - evidence/: runtime logs and smoke-test responses
+          - gradle.properties: workspace product/configuration snapshot
+          - staged-deploy-files.txt: exact deploy manifest
+          EOF
+
+      - name: Upload full setup and runtime evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          if-no-files-found: ignore
-          name: nexcent-liferay-runtime-evidence
+          if-no-files-found: warn
+          name: nexcent-dxp-2026-q2-8-full-setup
           path: |
-            liferay-runtime.log
-            nexcent-runtime.js
-            test-results
+            build/nexcent-full-setup
             playwright-report
             bundles/logs
             bundles/osgi/logs
