@@ -35,6 +35,10 @@ jobs:
       - name: Run full DXP 2026.Q2.8 setup
         run: bash scripts/liferay/full-setup-q2.sh
 
+      - name: Capture reproducible deployment outputs
+        if: always()
+        run: bash scripts/liferay/package-setup-artifacts.sh
+
       - name: Upload downloadable setup package
         if: always()
         uses: actions/upload-artifact@v4
@@ -59,9 +63,9 @@ jobs:
             echo "Result: **${JOB_STATUS}**"
             echo
             echo 'The workflow packages `nexcent-dxp-2026-q2-8-full-setup` with:'
-            echo '- all staged Gradle deployment artifacts'
+            echo '- all generated client-extension ZIPs and OSGi module JARs'
             echo '- unattended portal configuration'
-            echo '- project setup inventory'
+            echo '- project setup inventory and deploy manifest'
             echo '- Liferay runtime logs and API responses'
             echo '- Playwright runtime evidence'
             echo
@@ -70,6 +74,15 @@ jobs:
               echo
               echo '```text'
               cat build/nexcent-full-setup/README.txt
+              echo '```'
+              echo '</details>'
+            fi
+            if [[ -f build/nexcent-full-setup/inventory/build-output-files.txt ]]; then
+              echo
+              echo '<details><summary>Download package manifest</summary>'
+              echo
+              echo '```text'
+              cat build/nexcent-full-setup/inventory/build-output-files.txt
               echo '```'
               echo '</details>'
             fi
