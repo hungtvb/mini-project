@@ -1,0 +1,69 @@
+name: Nexcent Setup Inventory
+
+on:
+  push:
+    branches:
+      - refactor/nexcent-ui-boundary
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  inventory:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build setup inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          {
+            echo '<!-- nexcent-setup-inventory -->'
+            echo '## Nexcent setup inventory'
+            echo
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo
+            echo '### Batch client extensions'
+            echo '```text'
+            find client-extensions -type f \
+              \( -name 'client-extension.yaml' -o -name '*.batch-engine-data.json' \) \
+              -print | sort
+            echo '```'
+            echo
+            echo '### OSGi modules'
+            echo '```text'
+            find modules -type f \
+              \( -name 'bnd.bnd' -o -name 'service.xml' -o -name 'rest-config.yaml' \) \
+              -print | sort
+            echo '```'
+            echo
+            echo '### Fragment and Style Book packages'
+            echo '```text'
+            find client-extensions -type f \
+              \( -name 'fragment.json' -o -name 'style-book.json' -o -name 'frontend-tokens-values.json' \) \
+              -print | sort
+            echo '```'
+            echo
+            echo '### Metric seed references'
+            echo '```text'
+            grep -R --line-number --fixed-strings 'NXC_METRIC_MEMBERS' \
+              client-extensions modules || true
+            echo '```'
+            echo
+            echo '### Nexcent bootstrap properties'
+            echo '```text'
+            grep -R --line-number -E \
+              'nexcent\.fragments|company\.default\.web\.id|NXC_OBJECTS|NXC_METRIC_SNAPSHOT|NXC_CONTACT_REQUEST' \
+              gradle.properties configs client-extensions modules 2>/dev/null || true
+            echo '```'
+          } > nexcent-setup-inventory.md
+
+      - name: Publish inventory to PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr comment 1 --repo "$GITHUB_REPOSITORY" --body-file nexcent-setup-inventory.md
