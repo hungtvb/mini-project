@@ -52,10 +52,13 @@ export NO_PROXY="localhost,127.0.0.1,$WEB_ID"
 export no_proxy="$NO_PROXY"
 export LIFERAY_BASE_URL
 export LIFERAY_ADMIN_EMAIL
+export NEXCENT_ARTIFACT_DIR="$ARTIFACT_DIR"
+export NEXCENT_SITE_ERC="$SITE_ERC"
+export NEXCENT_SITE_NAME="$SITE_NAME"
 
 mkdir -p "$ARTIFACT_DIR"/{config,deploy,evidence,inventory}
 
-log "Inventorying current project setup"
+log 'Inventorying current project setup'
 find client-extensions -type f \
     \( -name 'client-extension.yaml' -o -name '*.batch-engine-data.json' \) \
     -print | sort | tee "$ARTIFACT_DIR/inventory/client-extensions.txt"
@@ -70,14 +73,14 @@ if ! grep -R --quiet --fixed-strings 'NXC_METRIC_MEMBERS' client-extensions/nexc
     fail 'Metric seed entries are missing from client-extensions/nexcent-objects'
 fi
 
-log "Installing frontend dependencies"
+log 'Installing frontend dependencies'
 npm ci
 
 log "Initializing clean Liferay DXP $PRODUCT bundle"
 chmod +x gradlew
 ./gradlew initBundle --no-daemon --stacktrace
 
-log "Configuring unattended Nexcent company"
+log 'Configuring unattended Nexcent company'
 cat > "$LIFERAY_HOME/portal-ext.properties" <<EOF
 company.default.locale=en_US
 company.default.name=Nexcent
@@ -138,7 +141,6 @@ for attempt in $(seq 1 240); do
     fi
 
     sleep 10
-
 done
 
 status=$(curl --noproxy '*' --silent --output /dev/null \
@@ -147,38 +149,81 @@ if [[ "$status" != '200' && "$status" != '302' && "$status" != '303' ]]; then
     fail "Portal did not become ready; final HTTP status: $status"
 fi
 
-log "Ensuring site $SITE_NAME exists"
-site_status=$(curl --noproxy '*' --silent \
-    --output "$ARTIFACT_DIR/evidence/site.json" \
-    --write-out '%{http_code}' \
-    --user "$LIFERAY_ADMIN_EMAIL:$ADMIN_PASSWORD" \
-    "$LIFERAY_BASE_URL/o/headless-admin-site/v1.0/sites/$SITE_ERC" || true)
-
-if [[ "$site_status" == '404' ]]; then
-    site_status=$(curl --noproxy '*' --silent --show-error \
+log "Waiting for Site Initializer to provision $SITE_NAME"
+site_status=0
+for attempt in $(seq 1 180); do
+    site_status=$(curl --noproxy '*' --silent \
         --output "$ARTIFACT_DIR/evidence/site.json" \
         --write-out '%{http_code}' \
         --user "$LIFERAY_ADMIN_EMAIL:$ADMIN_PASSWORD" \
-        --header 'Content-Type: application/json' \
-        --request POST \
-        --data "{\"active\":true,\"externalReferenceCode\":\"$SITE_ERC\",\"friendlyUrlPath\":\"/next-gen-site\",\"name\":\"$SITE_NAME\"}" \
-        "$LIFERAY_BASE_URL/o/headless-admin-site/v1.0/sites" || true)
-fi
+        "$LIFERAY_BASE_URL/o/headless-admin-site/v1.0/sites/$SITE_ERC" || true)
 
-if [[ "$site_status" != '200' && "$site_status" != '201' ]]; then
+    if [[ "$site_status" == '200' ]]; then
+        break
+    fi
+
+    if (( attempt % 12 == 0 )); then
+        log "Site Initializer wait attempt $attempt returned HTTP $site_status"
+        grep -i -E 'site initializer|NXC_NEXT_GEN_SITE|nexcent|ERROR|Exception' \
+            "$ARTIFACT_DIR/evidence/liferay-runtime.log" | tail -n 120 || true
+    fi
+
+    sleep 5
+done
+
+if [[ "$site_status" != '200' ]]; then
     cat "$ARTIFACT_DIR/evidence/site.json" || true
-    fail "Unable to resolve/create Nexcent site; HTTP $site_status"
+    fail "Site Initializer did not provision $SITE_ERC; HTTP $site_status"
 fi
 
-node <<'NODE'
+SITE_FILE="$ARTIFACT_DIR/evidence/site.json" node <<'NODE'
 const fs = require('node:fs');
-const site = JSON.parse(fs.readFileSync(process.env.NEXCENT_ARTIFACT_DIR
-    ? `${process.env.NEXCENT_ARTIFACT_DIR}/evidence/site.json`
-    : 'build/nexcent-full-setup/evidence/site.json', 'utf8'));
-if (!site.externalReferenceCode || !site.id) {
-    throw new Error('Site response is missing externalReferenceCode or id');
+const site = JSON.parse(fs.readFileSync(process.env.SITE_FILE, 'utf8'));
+if (site.externalReferenceCode !== process.env.NEXCENT_SITE_ERC || !site.id) {
+    throw new Error('Site response is missing the expected ERC or numeric id');
 }
 console.log(`Site ready: ${site.name} (${site.externalReferenceCode}, id=${site.id})`);
+NODE
+
+SITE_ID=$(node -e "const site=require(process.argv[1]); process.stdout.write(String(site.id));" \
+    "$ARTIFACT_DIR/evidence/site.json")
+export NEXCENT_SITE_ID="$SITE_ID"
+
+log 'Waiting for Home page composition'
+pages_status=0
+for attempt in $(seq 1 120); do
+    pages_status=$(curl --noproxy '*' --silent \
+        --output "$ARTIFACT_DIR/evidence/site-pages.json" \
+        --write-out '%{http_code}' \
+        --user "$LIFERAY_ADMIN_EMAIL:$ADMIN_PASSWORD" \
+        "$LIFERAY_BASE_URL/o/headless-admin-site/v1.0/sites/$SITE_ID/site-pages?pageSize=100" || true)
+
+    if [[ "$pages_status" == '200' ]] && SITE_PAGES_FILE="$ARTIFACT_DIR/evidence/site-pages.json" node <<'NODE'
+const fs = require('node:fs');
+const response = JSON.parse(fs.readFileSync(process.env.SITE_PAGES_FILE, 'utf8'));
+if (!(response.items ?? []).some((item) => item.name === 'Home')) {
+    process.exit(1);
+}
+NODE
+    then
+        break
+    fi
+
+    sleep 5
+done
+
+if [[ "$pages_status" != '200' ]]; then
+    fail "Unable to read Site Pages; HTTP $pages_status"
+fi
+
+SITE_PAGES_FILE="$ARTIFACT_DIR/evidence/site-pages.json" node <<'NODE'
+const fs = require('node:fs');
+const response = JSON.parse(fs.readFileSync(process.env.SITE_PAGES_FILE, 'utf8'));
+const home = (response.items ?? []).find((item) => item.name === 'Home');
+if (!home) {
+    throw new Error('Site Initializer did not create the Home page');
+}
+console.log(`Home page ready: ${home.friendlyUrlPath || home.friendlyURL || '/home'}`);
 NODE
 
 log 'Waiting for React runtime, CAPTCHA API, and Metrics Object API'
@@ -224,7 +269,6 @@ for attempt in $(seq 1 180); do
     fi
 
     sleep 5
-
 done
 
 if [[ "${runtime_ready:-false}" != 'true' || "${captcha_status:-0}" != '200' || "${metrics_status:-0}" != '200' ]]; then
@@ -272,6 +316,8 @@ Node: 20.19.0
 Verified:
 - clean DXP 2026.Q2.8 bootstrap
 - complete Gradle workspace deployment
+- Site Initializer autoprovisioning
+- Nexcent Landing Master and Home page creation
 - consolidated Nexcent Objects batch import
 - four metric seed entries
 - Contact CAPTCHA and REST route availability
