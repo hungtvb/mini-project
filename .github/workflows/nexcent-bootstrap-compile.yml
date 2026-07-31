@@ -1,0 +1,40 @@
+name: Nexcent Bootstrap Compile
+
+on:
+  push:
+    branches:
+      - tmp/nexcent-layout-bootstrap
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Compile bootstrap module against DXP API
+        run: |
+          chmod +x gradlew
+          ./gradlew :modules:nexcent-site-bootstrap:compileJava --no-daemon --stacktrace
+
+      - name: Publish compile result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          gh pr comment 1 --repo "$GITHUB_REPOSITORY" --body "<!-- nexcent-bootstrap-compile -->
+          ## Nexcent bootstrap compile
+
+          Commit: \`$GITHUB_SHA\`
+          Result: **$JOB_STATUS**"
