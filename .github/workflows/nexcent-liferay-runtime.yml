@@ -29,7 +29,7 @@ jobs:
     timeout-minutes: 55
 
     env:
-      LIFERAY_BASE_URL: http://127.0.0.1:8080
+      LIFERAY_BASE_URL: http://nexcent.com:8080
 
     steps:
       - uses: actions/checkout@v4
@@ -61,15 +61,18 @@ jobs:
 
       - name: Configure unattended local portal
         run: |
+          echo '127.0.0.1 nexcent.com' | sudo tee -a /etc/hosts
           cat > bundles/portal-ext.properties <<'EOF'
           company.default.locale=en_US
           company.default.name=Nexcent
           company.default.web.id=nexcent.com
+          company.security.auth.type=emailAddress
           company.security.strangers=false
           default.admin.email.address.prefix=admin
           default.admin.first.name=Nexcent
           default.admin.last.name=Admin
           default.admin.password=learn
+          default.admin.screen.name=nexcentadmin
           setup.wizard.enabled=false
           terms.of.use.required=false
           users.reminder.queries.enabled=false
