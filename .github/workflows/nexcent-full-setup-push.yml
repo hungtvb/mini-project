@@ -1,0 +1,88 @@
+name: Nexcent Full Q2.8 Setup
+
+on:
+  push:
+    branches:
+      - refactor/nexcent-ui-boundary
+
+concurrency:
+  cancel-in-progress: true
+  group: nexcent-full-q2-setup-${{ github.ref }}
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  full-setup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: actions/setup-node@v4
+        with:
+          cache: npm
+          node-version: 20.19.0
+
+      - name: Run full DXP 2026.Q2.8 setup
+        run: bash scripts/liferay/full-setup-q2.sh
+
+      - name: Upload downloadable setup package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          if-no-files-found: warn
+          name: nexcent-dxp-2026-q2-8-full-setup
+          path: build/nexcent-full-setup
+          retention-days: 14
+
+      - name: Publish setup result to PR
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JOB_STATUS: ${{ job.status }}
+        shell: bash
+        run: |
+          {
+            echo '<!-- nexcent-full-setup-result -->'
+            echo '## Nexcent DXP 2026.Q2.8 full setup'
+            echo
+            echo "Commit: \`${GITHUB_SHA}\`"
+            echo "Result: **${JOB_STATUS}**"
+            echo
+            echo 'The workflow packages `nexcent-dxp-2026-q2-8-full-setup` with:'
+            echo '- all staged Gradle deployment artifacts'
+            echo '- unattended portal configuration'
+            echo '- project setup inventory'
+            echo '- Liferay runtime logs and API responses'
+            echo '- Playwright runtime evidence'
+            echo
+            if [[ -f build/nexcent-full-setup/README.txt ]]; then
+              echo '<details><summary>Verification summary</summary>'
+              echo
+              echo '```text'
+              cat build/nexcent-full-setup/README.txt
+              echo '```'
+              echo '</details>'
+            fi
+            if [[ "$JOB_STATUS" != 'success' && -f build/nexcent-full-setup/evidence/liferay-runtime.log ]]; then
+              echo
+              echo '<details><summary>Latest Liferay log</summary>'
+              echo
+              echo '```text'
+              tail -n 120 build/nexcent-full-setup/evidence/liferay-runtime.log
+              echo '```'
+              echo '</details>'
+            fi
+          } > nexcent-full-setup-result.md
+
+          gh pr comment 1 --repo "$GITHUB_REPOSITORY" \
+            --body-file nexcent-full-setup-result.md
