@@ -1,12 +1,16 @@
 import {describe, expect, it} from 'vitest';
 
-import {staticElementNames} from './registerStaticElements';
+import {liferayElementNames} from './registerLiferayElements';
 import {normalizeStaticCss} from './shell/StaticStyleBoundary';
 
-describe('Nexcent static React runtime', () => {
+describe('Nexcent Liferay React runtime', () => {
     it('registers unique custom element names', () => {
-        expect(new Set(staticElementNames).size).toBe(staticElementNames.length);
-        expect(staticElementNames.every((name) => name.includes('-'))).toBe(true);
+        expect(new Set(liferayElementNames).size).toBe(
+            liferayElementNames.length
+        );
+        expect(liferayElementNames.every((name) => name.includes('-'))).toBe(
+            true
+        );
     });
 
     it('preserves the prototype 62.5 percent rem scale inside Shadow DOM', () => {

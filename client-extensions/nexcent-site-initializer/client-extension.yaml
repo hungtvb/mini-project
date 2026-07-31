@@ -1,0 +1,23 @@
+assemble:
+    - from: build/site-initializer
+      into: site-initializer
+
+nexcent-site-initializer:
+    name: Nexcent Site Initializer
+    oAuthApplicationHeadlessServer: nexcent-site-initializer-oauth
+    siteExternalReferenceCode: NXC_NEXT_GEN_SITE
+    siteName: Next Gen Site
+    type: siteInitializer
+
+nexcent-site-initializer-oauth:
+    .serviceAddress: localhost:8080
+    .serviceScheme: http
+    name: Nexcent Site Initializer OAuth
+    scopes:
+        - Liferay.Headless.Admin.Site.everything
+        - Liferay.Headless.Admin.Content.everything
+        - Liferay.Object.Admin.REST.everything
+        - Liferay.Headless.Object.everything
+        - Liferay.Headless.Admin.User.everything
+        - Liferay.Headless.Batch.Engine.everything
+    type: oAuthApplicationHeadlessServer

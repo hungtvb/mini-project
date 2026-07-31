@@ -90,7 +90,7 @@ export async function resolveContentStructure(
     const normalizedIdentifier = normalizeIdentifier(identifier);
 
     if (!normalizedIdentifier) {
-        throw new Error('A Content Structure key or ERC is required.');
+        throw new Error('A Content Structure key, ERC, or name is required.');
     }
 
     if (/^\d+$/.test(normalizedIdentifier)) {
@@ -102,14 +102,14 @@ export async function resolveContentStructure(
 
     const structures = await listContentStructures(siteId, locale);
     const structure = structures.find((item) =>
-        [item.externalReferenceCode, item.key, item.id].some(
+        [item.externalReferenceCode, item.key, item.name, item.id].some(
             (candidate) => normalizeIdentifier(candidate) === normalizedIdentifier
         )
     );
 
     if (!structure) {
         throw new Error(
-            `Content Structure key or ERC "${identifier}" was not found in site ${siteId}.`
+            `Content Structure key, ERC, or name "${identifier}" was not found in site ${siteId}.`
         );
     }
 
@@ -133,4 +133,3 @@ export async function listStructuredContents(
 export function clearStructuredContentRequestCache(): void {
     requestCache.clear();
 }
-

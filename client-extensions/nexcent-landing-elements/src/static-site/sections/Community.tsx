@@ -1,17 +1,10 @@
-import content from '../../../reference-assets/content.json';
-import {resolveStaticAsset} from '../assets';
-import {
-    type HeadlessStructuredContent,
-    readContentImage,
-    readContentText,
-} from '../headless/headlessContentClient';
-import {useStructuredContentCollection} from '../headless/useStructuredContentCollection';
-import {
-    readBooleanSetting,
-    readNumberSetting,
-    readStringSetting,
-} from '../runtime/fragmentSettings';
-import {buildArticleDetailUrl} from '../../utils/url';
+import type {ButtonHTMLAttributes} from 'react';
+
+import {Community} from '@nexcent/ui';
+
+import {readNumberSetting, readStringSetting} from '../runtime/fragmentSettings';
+import {mapNxcCommunityProps} from './Community.mapping';
+import {useNxcCommunitySources} from './Community.sources';
 
 type HostProps = {
     host?: HTMLElement;
@@ -27,56 +20,13 @@ const COMMUNITY_MODAL_RULE = JSON.stringify({
     version: 1,
 });
 
-type CommunityItem = {
-    description: string;
-    imageAlt: string;
-    imageURL: string;
-    title: string;
-};
+const COMMUNITY_ITEM_PROPS = {
+    'aria-haspopup': 'dialog',
+    className: 'nxc-modal-trigger-card',
+    'data-nxc-modal': COMMUNITY_MODAL_RULE,
+} as ButtonHTMLAttributes<HTMLButtonElement>;
 
-const FALLBACK_COMMUNITY_ITEMS: CommunityItem[] = content.community.items.map(
-    (item) => ({
-        description: item.description,
-        imageAlt: item.imageAlt,
-        imageURL: resolveStaticAsset(item.image),
-        title: item.title,
-    })
-);
-
-function mapCommunityContent(
-    structuredContent: HeadlessStructuredContent,
-    index: number
-): CommunityItem {
-    const fallback =
-        FALLBACK_COMMUNITY_ITEMS[index % FALLBACK_COMMUNITY_ITEMS.length] ??
-        FALLBACK_COMMUNITY_ITEMS[0];
-    const image = readContentImage(
-        structuredContent,
-        ['icon', 'image', 'iconFile'],
-        {alt: fallback.imageAlt, url: fallback.imageURL}
-    );
-
-    return {
-        description: readContentText(
-            structuredContent,
-            ['description', 'summary'],
-            fallback.description
-        ),
-        imageAlt: readContentText(
-            structuredContent,
-            ['iconAlt', 'imageAlt'],
-            image.alt
-        ),
-        imageURL: image.url,
-        title: readContentText(
-            structuredContent,
-            ['title', 'heading'],
-            structuredContent.title || fallback.title
-        ),
-    };
-}
-
-export function StaticCommunity({host}: HostProps) {
+export function NxcCommunity({host}: HostProps) {
     const structureIdentifier = readStringSetting(
         host,
         'structure-identifier',
@@ -86,54 +36,34 @@ export function StaticCommunity({host}: HostProps) {
         max: 12,
         min: 1,
     });
-    const title = readStringSetting(host, 'title', content.community.title);
-    const description = readStringSetting(
+    const sourceState = useNxcCommunitySources(
         host,
-        'description',
-        content.community.description
-    );
-    const {error, items, status} = useStructuredContentCollection({
-        fallback: FALLBACK_COMMUNITY_ITEMS,
-        host,
-        mapContent: mapCommunityContent,
         maxItems,
-        structureIdentifier,
+        structureIdentifier
+    );
+
+    if (sourceState.status === 'error') {
+        console.error(
+            '[NxcCommunity] Failed to load Community content.',
+            sourceState.error
+        );
+        return null;
+    }
+
+    if (sourceState.status !== 'ready') {
+        return null;
+    }
+
+    const props = mapNxcCommunityProps(sourceState.contents, {
+        description:
+            readStringSetting(host, 'description', '') || undefined,
+        title: readStringSetting(host, 'title', '') || undefined,
     });
 
-    return (
-        <section className="community" data-runtime-state={status} id="services">
-            <div className="community__container">
-                <div className="community__title title">
-                    <h2>{title}</h2>
-                    <p>{description}</p>
-                </div>
-
-                <div className="community__items mt">
-                    {items.map((item, index) => (
-                        <button
-                            aria-haspopup="dialog"
-                            className="community__item nxc-modal-trigger-card"
-                            data-nxc-modal={COMMUNITY_MODAL_RULE}
-                            key={`${item.title}-${index}`}
-                            type="button"
-                        >
-                            <div className="community__icon">
-                                <img src={item.imageURL} alt={item.imageAlt} />
-                            </div>
-                            <h3>{item.title}</h3>
-                            <p className="community__description">
-                                {item.description}
-                            </p>
-                        </button>
-                    ))}
-                </div>
-
-                {error ? (
-                    <span className="sr-only" role="status">
-                        Services are using fallback content: {error.message}
-                    </span>
-                ) : null}
-            </div>
-        </section>
-    );
+    return props.items.length > 0 ? (
+        <Community
+            {...props}
+            getItemProps={() => COMMUNITY_ITEM_PROPS}
+        />
+    ) : null;
 }

@@ -19,10 +19,9 @@ const outputDirectory = path.join(projectDirectory, 'build', 'fragments');
 const outputPath = path.join(outputDirectory, 'collections-nexcent-components.zip');
 const collectionKey = 'nexcent-components';
 const deployDescriptor = {
-    companyWebId: process.env.NEXCENT_FRAGMENTS_COMPANY_WEB_ID || 'nextcen.com',
+    companyWebId: process.env.NEXCENT_FRAGMENTS_COMPANY_WEB_ID || 'nexcent.com',
     groupKey: process.env.NEXCENT_FRAGMENTS_GROUP_KEY || 'Next Gen Site',
 };
-const previewOnlyFragments = new Set(['nexcent-react-page']);
 
 function run(command, args, options = {}) {
     return new Promise((resolve, reject) => {
@@ -68,10 +67,7 @@ if (!collection.name) {
 }
 
 const fragmentEntries = (await readdir(fragmentSourceDirectory, {withFileTypes: true}))
-    .filter(
-        (entry) =>
-            entry.isDirectory() && !previewOnlyFragments.has(entry.name)
-    )
+    .filter((entry) => entry.isDirectory())
     .sort((left, right) => left.name.localeCompare(right.name));
 
 if (fragmentEntries.length === 0) {
@@ -115,21 +111,11 @@ try {
         );
     }
 
-    await run(await resolveJarCommand(), [
-        '--create',
-        '--file',
-        outputPath,
-        '--no-manifest',
-        '-C',
-        stagingDirectory,
-        collectionKey,
-        '-C',
-        stagingDirectory,
-        'liferay-deploy-fragments.json',
-    ]);
+    const jarCommand = await resolveJarCommand();
+    await run(jarCommand, ['--create', '--file', outputPath, '-C', stagingDirectory, '.']);
 }
 finally {
     await rm(stagingDirectory, {force: true, recursive: true});
 }
 
-console.log(`Created Fragment Set package: ${outputPath}`);
+console.log(`Packaged ${fragmentEntries.length} fragments to ${outputPath}`);

@@ -1,0 +1,43 @@
+{
+    "pageElement": {
+        "pageElements": [
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-header",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragmentSettings": {
+                        "unallowedFragments": []
+                    }
+                },
+                "type": "DropZone"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-footer",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-global-modal",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            }
+        ],
+        "type": "Root"
+    },
+    "version": 1.1
+}

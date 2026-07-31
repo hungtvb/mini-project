@@ -1,0 +1,50 @@
+{
+    "configuration": {
+        "className": "com.liferay.object.rest.dto.v1_0.ObjectEntry",
+        "parameters": {
+            "containsHeaders": "true",
+            "createStrategy": "UPSERT",
+            "importStrategy": "ON_ERROR_CONTINUE",
+            "updateStrategy": "UPDATE"
+        },
+        "taskItemDelegateName": "C_NXCMetricsSnapshot"
+    },
+    "items": [
+        {
+            "externalReferenceCode": "NXC_METRIC_MEMBERS",
+            "metricKey": "members",
+            "metricLabel": "Members",
+            "metricValue": 2245341,
+            "previousMetricValue": 2245341,
+            "metricIconAlt": "Members",
+            "snapshotDate": "2026-07-29T00:00:00Z"
+        },
+        {
+            "externalReferenceCode": "NXC_METRIC_CLUBS",
+            "metricKey": "clubs",
+            "metricLabel": "Clubs",
+            "metricValue": 46328,
+            "previousMetricValue": 46328,
+            "metricIconAlt": "Clubs",
+            "snapshotDate": "2026-07-29T00:00:00Z"
+        },
+        {
+            "externalReferenceCode": "NXC_METRIC_EVENT_BOOKINGS",
+            "metricKey": "eventBookings",
+            "metricLabel": "Event Bookings",
+            "metricValue": 828867,
+            "previousMetricValue": 828867,
+            "metricIconAlt": "Event bookings",
+            "snapshotDate": "2026-07-29T00:00:00Z"
+        },
+        {
+            "externalReferenceCode": "NXC_METRIC_PAYMENTS",
+            "metricKey": "payments",
+            "metricLabel": "Payments",
+            "metricValue": 1926436,
+            "previousMetricValue": 1926436,
+            "metricIconAlt": "Payments",
+            "snapshotDate": "2026-07-29T00:00:00Z"
+        }
+    ]
+}

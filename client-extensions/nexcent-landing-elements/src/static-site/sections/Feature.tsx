@@ -1,88 +1,49 @@
-import content from '../../../reference-assets/content.json';
-import {resolveStaticAsset} from '../assets';
+import type {AnchorHTMLAttributes} from 'react';
 
+import {Feature} from '@nexcent/ui';
+
+import {mapNxcFeatureProps} from './Feature.mapping';
 import {
-    readBooleanSetting,
-    readNumberSetting,
-    readStringSetting,
-} from '../runtime/fragmentSettings';
+    type FeatureKey,
+    readNxcFeatureSources,
+} from './Feature.sources';
 
 type HostProps = {
     host?: HTMLElement;
 };
 
-type FeatureKey = keyof typeof content.features;
-
-type FeatureProps = HostProps & {
+type FeatureAdapterProps = HostProps & {
     featureKey: FeatureKey;
 };
 
-export function StaticFeature({featureKey, host}: FeatureProps) {
-    const fallback = content.features[featureKey];
-    const title = readStringSetting(host, 'title', fallback.title);
-    const description = readStringSetting(
-        host,
-        'description',
-        fallback.description
+export function NxcFeature({featureKey, host}: FeatureAdapterProps) {
+    const props = mapNxcFeatureProps(
+        readNxcFeatureSources(featureKey, host)
     );
-    const buttonLabel = readStringSetting(
-        host,
-        'button-label',
-        fallback.buttonLabel
-    );
-    const buttonHref = readStringSetting(
-        host,
-        'button-url',
-        fallback.buttonHref
-    );
-    const buttonTarget = readStringSetting(host, 'button-target', '_self');
-    const imageURL = readStringSetting(
-        host,
-        'image-url',
-        resolveStaticAsset(fallback.image)
-    );
-    const imageAlt = readStringSetting(host, 'image-alt', fallback.imageAlt);
-    const showButton = readBooleanSetting(host, 'show-button', true);
+
+    if (!props.title || !props.image.src) {
+        return null;
+    }
+
     const modalRule = JSON.stringify({
         id: `feature-${featureKey}`,
         slots: {
-            description: {value: description},
+            description: {value: props.description || ''},
             eyebrow: {value: 'Feature'},
             media: {
-                alt: imageAlt,
-                url: imageURL,
+                alt: props.image.alt,
+                url: props.image.src,
             },
-            title: {value: title},
+            title: {value: props.title},
         },
         version: 1,
     });
+    const actionProps = props.action
+        ? ({
+              'aria-haspopup': 'dialog',
+              'data-nxc-modal': modalRule,
+          } as AnchorHTMLAttributes<HTMLAnchorElement>)
+        : undefined;
 
-    return (
-        <section
-            className="pixelgrade section"
-            id={featureKey === 'primary' ? 'features' : undefined}
-        >
-            <div className="pixelgrade__container section__container block">
-                <div className="pixelgrade__item section__item block__item">
-                    <h2 className="pixelgrade__title block__title">{title}</h2>
-                    <p className="block__info">{description}</p>
-                    {showButton ? (
-                        <a
-                            aria-haspopup="dialog"
-                            className="pixelgrade__btn btn block__box"
-                            data-nxc-modal={modalRule}
-                            href={buttonHref}
-                            target={buttonTarget || undefined}
-                        >
-                            {buttonLabel}
-                        </a>
-                    ) : null}
-                </div>
-
-                <div className="pixelgrade__img section__img">
-                    <img src={imageURL} alt={imageAlt} />
-                </div>
-            </div>
-        </section>
-    );
+    return <Feature {...props} actionProps={actionProps} />;
 }

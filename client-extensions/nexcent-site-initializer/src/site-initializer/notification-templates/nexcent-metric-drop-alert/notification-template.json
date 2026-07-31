@@ -1,0 +1,21 @@
+{
+    "description": "Notifies administrators when a Nexcent metric decreases by at least five percent.",
+    "editorType": "richText",
+    "externalReferenceCode": "NXC_METRIC_DROP_ALERT",
+    "name": "Nexcent Metric Drop Alert",
+    "name_i18n": {
+        "en_US": "Nexcent Metric Drop Alert"
+    },
+    "objectDefinitionExternalReferenceCode": "NXC_METRIC_SNAPSHOT",
+    "recipientType": "role",
+    "recipients": [
+        {
+            "roleName": "Administrator"
+        }
+    ],
+    "subject": {
+        "en_US": "Nexcent metric decreased by at least 5%"
+    },
+    "system": false,
+    "type": "userNotification"
+}
