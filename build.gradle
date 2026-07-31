@@ -11,6 +11,7 @@ def liferayHomeDir = file(findProperty("liferay.workspace.home.dir") ?: "bundles
 def fragmentPackageFile = fragmentProjectDir.toPath()
 	.resolve("build/fragments/collections-nexcent-components.zip")
 	.toFile()
+def objectsBatchDir = file("client-extensions/nexcent-objects/batch")
 def siteInitializerProjectDir = file("client-extensions/nexcent-site-initializer")
 def siteInitializerSourceDir = new File(siteInitializerProjectDir, "src/site-initializer")
 def siteInitializerBuildDir = new File(siteInitializerProjectDir, "build/site-initializer")
@@ -19,6 +20,7 @@ def themeStyleBookDir = file(
 
 tasks.register("prepareNexcentSiteInitializer") {
 	inputs.dir(fragmentProjectDir.toPath().resolve("fragments").toFile())
+	inputs.dir(objectsBatchDir)
 	inputs.dir(siteInitializerSourceDir)
 	inputs.dir(themeStyleBookDir)
 	outputs.dir(siteInitializerBuildDir)
@@ -29,6 +31,11 @@ tasks.register("prepareNexcentSiteInitializer") {
 		copy {
 			from(siteInitializerSourceDir)
 			into(siteInitializerBuildDir)
+		}
+
+		copy {
+			from(objectsBatchDir)
+			into(new File(siteInitializerBuildDir, "batch"))
 		}
 
 		copy {
