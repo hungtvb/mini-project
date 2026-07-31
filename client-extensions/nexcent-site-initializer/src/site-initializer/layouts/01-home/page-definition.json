@@ -1,0 +1,103 @@
+{
+    "pageElement": {
+        "pageElements": [
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-hero",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-clients",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-community",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-feature-primary",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-statistics",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-feature-secondary",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-testimonial",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-marketing",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-react-cta",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            },
+            {
+                "definition": {
+                    "fragment": {
+                        "key": "nexcent-contact-form",
+                        "siteKey": "[$GROUP_KEY$]"
+                    }
+                },
+                "type": "Fragment"
+            }
+        ],
+        "type": "Root"
+    },
+    "settings": {
+        "masterPage": {
+            "key": "nexcent-landing-master"
+        }
+    },
+    "version": 1.1
+}
