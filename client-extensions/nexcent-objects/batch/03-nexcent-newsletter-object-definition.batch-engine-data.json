@@ -1,0 +1,75 @@
+{
+    "configuration": {
+        "className": "com.liferay.object.admin.rest.dto.v1_0.ObjectDefinition",
+        "parameters": {
+            "containsHeaders": "true",
+            "createStrategy": "UPSERT",
+            "onErrorFail": "false",
+            "updateStrategy": "UPDATE"
+        },
+        "taskItemDelegateName": "DEFAULT"
+    },
+    "items": [
+        {
+            "active": true,
+            "defaultLanguageId": "en_US",
+            "externalReferenceCode": "NXC_NEWSLETTER_SUBSCRIPTION",
+            "label": {
+                "en_US": "NXC Newsletter Subscription"
+            },
+            "name": "NXCNewsletterSubscription",
+            "objectFields": [
+                {
+                    "businessType": "Text",
+                    "indexed": true,
+                    "indexedAsKeyword": true,
+                    "label": {
+                        "en_US": "Email Address"
+                    },
+                    "name": "email",
+                    "required": true
+                },
+                {
+                    "businessType": "Boolean",
+                    "indexed": false,
+                    "label": {
+                        "en_US": "Consent"
+                    },
+                    "name": "consent",
+                    "required": true
+                },
+                {
+                    "businessType": "Text",
+                    "indexed": false,
+                    "label": {
+                        "en_US": "Locale"
+                    },
+                    "name": "locale",
+                    "required": false
+                },
+                {
+                    "businessType": "Text",
+                    "indexed": false,
+                    "label": {
+                        "en_US": "Source Page"
+                    },
+                    "name": "sourcePage",
+                    "required": false
+                }
+            ],
+            "objectFolderExternalReferenceCode": "NXC_OBJECTS",
+            "panelCategoryKey": "control_panel.object",
+            "pluralLabel": {
+                "en_US": "NXC Newsletter Subscriptions"
+            },
+            "restContextPath": "/o/c/nxcnewslettersubscriptions",
+            "scope": "company",
+            "status": {
+                "code": 0,
+                "label": "approved",
+                "label_i18n": "Approved"
+            },
+            "titleObjectFieldName": "email"
+        }
+    ]
+}
