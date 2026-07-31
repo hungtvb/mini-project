@@ -11,6 +11,50 @@ def liferayHomeDir = file(findProperty("liferay.workspace.home.dir") ?: "bundles
 def fragmentPackageFile = fragmentProjectDir.toPath()
 	.resolve("build/fragments/collections-nexcent-components.zip")
 	.toFile()
+def siteInitializerProjectDir = file("client-extensions/nexcent-site-initializer")
+def siteInitializerSourceDir = new File(siteInitializerProjectDir, "src/site-initializer")
+def siteInitializerBuildDir = new File(siteInitializerProjectDir, "build/site-initializer")
+def themeStyleBookDir = file(
+	"client-extensions/nexcent-theme/style-book/nexcent-default")
+
+tasks.register("prepareNexcentSiteInitializer") {
+	inputs.dir(fragmentProjectDir.toPath().resolve("fragments").toFile())
+	inputs.dir(siteInitializerSourceDir)
+	inputs.dir(themeStyleBookDir)
+	outputs.dir(siteInitializerBuildDir)
+
+	doLast {
+		delete(siteInitializerBuildDir)
+
+		copy {
+			from(siteInitializerSourceDir)
+			into(siteInitializerBuildDir)
+		}
+
+		copy {
+			from(new File(fragmentProjectDir, "fragments/collection.json"))
+			into(new File(
+				siteInitializerBuildDir,
+				"fragments/group/nexcent-components"))
+		}
+
+		copy {
+			from(new File(fragmentProjectDir, "fragments")) {
+				exclude("collection.json")
+			}
+			into(new File(
+				siteInitializerBuildDir,
+				"fragments/group/nexcent-components/fragments"))
+		}
+
+		copy {
+			from(themeStyleBookDir)
+			into(new File(
+				siteInitializerBuildDir,
+				"style-books/nexcent-default"))
+		}
+	}
+}
 
 tasks.register("deployNexcentFragments", Copy) {
 	dependsOn(
@@ -20,6 +64,26 @@ tasks.register("deployNexcentFragments", Copy) {
 	into(new File(liferayHomeDir, "deploy"))
 }
 
+gradle.projectsEvaluated {
+	def siteInitializerProject = findProject(
+		":client-extensions:nexcent-site-initializer")
+
+	if (siteInitializerProject != null) {
+		siteInitializerProject.tasks.configureEach { task ->
+			if (
+				task.name == "assemble" ||
+				task.name == "build" ||
+				task.name == "deploy" ||
+				task.name.startsWith("package")) {
+
+				task.dependsOn(rootProject.tasks.named(
+					"prepareNexcentSiteInitializer"))
+			}
+		}
+	}
+}
+
 tasks.named("deploy") {
 	dependsOn("deployNexcentFragments")
+	dependsOn("prepareNexcentSiteInitializer")
 }
