@@ -56,6 +56,9 @@ tasks.register("prepareNexcentSiteInitializer") {
 	}
 }
 
+// Use this task only for updating fragments on an already provisioned site.
+// Clean environments receive the same fragment collection from the Site
+// Initializer, which avoids a race between fragment import and site creation.
 tasks.register("deployNexcentFragments", Copy) {
 	dependsOn(
 		":client-extensions:nexcent-landing-elements:packageRunBuild")
@@ -84,6 +87,5 @@ gradle.projectsEvaluated {
 }
 
 tasks.named("deploy") {
-	dependsOn("deployNexcentFragments")
 	dependsOn("prepareNexcentSiteInitializer")
 }
