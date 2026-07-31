@@ -1,5 +1,11 @@
 // Check GETTING_STARTED.md for information regarding usage.
 
+node {
+	nodeVersion = "20.19.0"
+	npmVersion = "10.8.2"
+	yarnVersion = "1.22.22"
+}
+
 def fragmentProjectDir = file("client-extensions/nexcent-landing-elements")
 def liferayHomeDir = file(findProperty("liferay.workspace.home.dir") ?: "bundles")
 def fragmentPackageFile = fragmentProjectDir.toPath()
