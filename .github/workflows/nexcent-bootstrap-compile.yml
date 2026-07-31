@@ -35,10 +35,17 @@ jobs:
           npm run typecheck --workspace @nexcent/landing-elements
           npm test --workspace @nexcent/landing-elements -- --run
 
-      - name: Compile bootstrap module against DXP API
+      - name: Generate Site Initializer package content
         run: |
           chmod +x gradlew
-          ./gradlew :modules:nexcent-site-bootstrap:compileJava --no-daemon --stacktrace
+          ./gradlew prepareNexcentSiteInitializer --no-daemon --stacktrace
+
+          test "$(find client-extensions/nexcent-site-initializer/build/site-initializer/data-definitions -name '*.json' | wc -l)" -eq 3
+          test "$(find client-extensions/nexcent-site-initializer/build/site-initializer/journal-articles -name '*.json' | wc -l)" -eq 7
+          test "$(find client-extensions/nexcent-site-initializer/build/site-initializer/journal-articles -name '*.xml' | wc -l)" -eq 7
+
+      - name: Compile bootstrap module against DXP API
+        run: ./gradlew :modules:nexcent-site-bootstrap:compileJava --no-daemon --stacktrace
 
       - name: Publish compile result
         if: always()
