@@ -22,6 +22,19 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - uses: actions/setup-node@v4
+        with:
+          cache: npm
+          node-version: 20.19.0
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Verify landing content resolver
+        run: |
+          npm run typecheck --workspace @nexcent/landing-elements
+          npm test --workspace @nexcent/landing-elements -- --run
+
       - name: Compile bootstrap module against DXP API
         run: |
           chmod +x gradlew
