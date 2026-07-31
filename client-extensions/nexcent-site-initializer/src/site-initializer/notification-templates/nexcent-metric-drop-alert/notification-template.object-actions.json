@@ -1,0 +1,18 @@
+[
+    {
+        "active": true,
+        "conditionExpression": "previousMetricValue > 0 AND metricValue <= previousMetricValue * 0.95",
+        "description": "Notify administrators when a metric decreases by at least five percent.",
+        "errorMessage": {
+            "en_US": "Unable to send the metric decrease notification."
+        },
+        "externalReferenceCode": "NXC_METRIC_DROP_ALERT_ACTION",
+        "label": {
+            "en_US": "Notify administrators about metric decrease"
+        },
+        "name": "notifyAdministratorsOnMetricDrop",
+        "objectActionExecutorKey": "notification",
+        "objectActionTriggerKey": "onAfterUpdate",
+        "system": false
+    }
+]
