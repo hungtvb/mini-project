@@ -34,19 +34,55 @@ cleanup() {
     fi
 }
 
+wait_for_http() {
+    local description=$1
+    local url=$2
+    local expected=$3
+    local output_file=${4:-/dev/null}
+    local credentials=${5:-}
+    local max_attempts=${6:-180}
+
+    for attempt in $(seq 1 "$max_attempts"); do
+        local curl_args=(
+            --noproxy '*'
+            --silent
+            --output "$output_file"
+            --write-out '%{http_code}'
+        )
+
+        if [[ -n "$credentials" ]]; then
+            curl_args+=(--user "$credentials")
+        fi
+
+        local status
+        status=$(curl "${curl_args[@]}" "$url" || true)
+
+        if [[ "$status" == "$expected" ]]; then
+            log "$description is ready (HTTP $status)"
+            return 0
+        fi
+
+        if (( attempt % 12 == 0 )); then
+            log "Waiting for $description (attempt $attempt, HTTP $status)"
+            tail -n 60 "$ARTIFACT_DIR/evidence/liferay-runtime.log" || true
+        fi
+
+        sleep 5
+    done
+
+    return 1
+}
+
 trap cleanup EXIT
 
-if [[ "$PRODUCT" != "$PRODUCT_EXPECTED" ]]; then
+[[ "$PRODUCT" == "$PRODUCT_EXPECTED" ]] || \
     fail "Expected liferay.workspace.product=$PRODUCT_EXPECTED, found $PRODUCT"
-fi
+[[ -n "$WEB_ID" ]] || fail 'nexcent.fragments.company.web.id is required'
+[[ -n "$SITE_NAME" ]] || fail 'nexcent.fragments.group.key is required'
 
-if [[ -z "$WEB_ID" ]]; then
-    fail 'nexcent.fragments.company.web.id must be configured in gradle.properties'
-fi
-
-if [[ -z "$SITE_NAME" ]]; then
-    fail 'nexcent.fragments.group.key must be configured in gradle.properties'
-fi
+grep -R --quiet --fixed-strings 'NXC_METRIC_MEMBERS' \
+    client-extensions/nexcent-objects || \
+    fail 'Metric seed entries are missing from nexcent-objects'
 
 export NO_PROXY="localhost,127.0.0.1,$WEB_ID"
 export no_proxy="$NO_PROXY"
@@ -56,6 +92,7 @@ export NEXCENT_ARTIFACT_DIR="$ARTIFACT_DIR"
 export NEXCENT_SITE_ERC="$SITE_ERC"
 export NEXCENT_SITE_NAME="$SITE_NAME"
 
+rm -rf "$ARTIFACT_DIR"
 mkdir -p "$ARTIFACT_DIR"/{config,deploy,evidence,inventory}
 
 log 'Inventorying current project setup'
@@ -69,10 +106,6 @@ find client-extensions -type f \
     \( -name 'fragment.json' -o -name 'style-book.json' -o -name 'frontend-tokens-values.json' \) \
     -print | sort | tee "$ARTIFACT_DIR/inventory/authoring-assets.txt"
 
-if ! grep -R --quiet --fixed-strings 'NXC_METRIC_MEMBERS' client-extensions/nexcent-objects; then
-    fail 'Metric seed entries are missing from client-extensions/nexcent-objects'
-fi
-
 log 'Installing frontend dependencies'
 npm ci
 
@@ -80,7 +113,7 @@ log "Initializing clean Liferay DXP $PRODUCT bundle"
 chmod +x gradlew
 ./gradlew initBundle --no-daemon --stacktrace
 
-log 'Configuring unattended Nexcent company'
+log 'Configuring unattended Nexcent company before first startup'
 cat > "$LIFERAY_HOME/portal-ext.properties" <<EOF
 company.default.locale=en_US
 company.default.name=Nexcent
@@ -107,13 +140,12 @@ if ! grep -qE "(^|[[:space:]])$WEB_ID([[:space:]]|$)" /etc/hosts 2>/dev/null; th
     fi
 fi
 
-log 'Building and staging the complete workspace'
-./gradlew deploy --no-daemon --stacktrace
-find "$LIFERAY_HOME/deploy" -maxdepth 2 -type f -print | sort \
-    | tee "$ARTIFACT_DIR/inventory/staged-deploy-files.txt"
-cp -R "$LIFERAY_HOME/deploy/." "$ARTIFACT_DIR/deploy/"
+# File Install must not see company-scoped Nexcent artifacts until the default
+# company has completed its first bootstrap.
+mkdir -p "$LIFERAY_HOME/deploy"
+find "$LIFERAY_HOME/deploy" -mindepth 1 -maxdepth 1 -delete
 
-log 'Starting Liferay'
+log 'Starting clean Liferay before deploying project artifacts'
 nohup env \
     JAVA_OPTS="${JAVA_OPTS:--Xms1g -Xmx3g -Dfile.encoding=UTF-8 -Duser.timezone=UTC}" \
     "$LIFERAY_HOME/tomcat/bin/catalina.sh" run \
@@ -149,32 +181,29 @@ if [[ "$status" != '200' && "$status" != '302' && "$status" != '303' ]]; then
     fail "Portal did not become ready; final HTTP status: $status"
 fi
 
+log 'Waiting for the Nexcent company and administrator account'
+wait_for_http \
+    'Nexcent administrator account' \
+    "$LIFERAY_BASE_URL/o/headless-admin-user/v1.0/my-user-account" \
+    '200' \
+    "$ARTIFACT_DIR/evidence/admin-user.json" \
+    "$LIFERAY_ADMIN_EMAIL:$ADMIN_PASSWORD" \
+    120 || fail "Company $WEB_ID was not created during first startup"
+
+log 'Building and deploying the complete workspace into the running portal'
+./gradlew deploy --no-daemon --stacktrace
+find "$LIFERAY_HOME/deploy" -maxdepth 2 -type f -print | sort \
+    | tee "$ARTIFACT_DIR/inventory/staged-deploy-files.txt"
+cp -R "$LIFERAY_HOME/deploy/." "$ARTIFACT_DIR/deploy/" 2>/dev/null || true
+
 log "Waiting for Site Initializer to provision $SITE_NAME"
-site_status=0
-for attempt in $(seq 1 180); do
-    site_status=$(curl --noproxy '*' --silent \
-        --output "$ARTIFACT_DIR/evidence/site.json" \
-        --write-out '%{http_code}' \
-        --user "$LIFERAY_ADMIN_EMAIL:$ADMIN_PASSWORD" \
-        "$LIFERAY_BASE_URL/o/headless-admin-site/v1.0/sites/$SITE_ERC" || true)
-
-    if [[ "$site_status" == '200' ]]; then
-        break
-    fi
-
-    if (( attempt % 12 == 0 )); then
-        log "Site Initializer wait attempt $attempt returned HTTP $site_status"
-        grep -i -E 'site initializer|NXC_NEXT_GEN_SITE|nexcent|ERROR|Exception' \
-            "$ARTIFACT_DIR/evidence/liferay-runtime.log" | tail -n 120 || true
-    fi
-
-    sleep 5
-done
-
-if [[ "$site_status" != '200' ]]; then
-    cat "$ARTIFACT_DIR/evidence/site.json" || true
-    fail "Site Initializer did not provision $SITE_ERC; HTTP $site_status"
-fi
+wait_for_http \
+    'Nexcent site initializer' \
+    "$LIFERAY_BASE_URL/o/headless-admin-site/v1.0/sites/$SITE_ERC" \
+    '200' \
+    "$ARTIFACT_DIR/evidence/site.json" \
+    "$LIFERAY_ADMIN_EMAIL:$ADMIN_PASSWORD" \
+    240 || fail "Site Initializer did not provision $SITE_ERC"
 
 SITE_FILE="$ARTIFACT_DIR/evidence/site.json" node <<'NODE'
 const fs = require('node:fs');
@@ -190,7 +219,6 @@ SITE_ID=$(node -e "const site=require(process.argv[1]); process.stdout.write(Str
 export NEXCENT_SITE_ID="$SITE_ID"
 
 log 'Waiting for Home page composition'
-pages_status=0
 for attempt in $(seq 1 120); do
     pages_status=$(curl --noproxy '*' --silent \
         --output "$ARTIFACT_DIR/evidence/site-pages.json" \
@@ -198,12 +226,11 @@ for attempt in $(seq 1 120); do
         --user "$LIFERAY_ADMIN_EMAIL:$ADMIN_PASSWORD" \
         "$LIFERAY_BASE_URL/o/headless-admin-site/v1.0/sites/$SITE_ID/site-pages?pageSize=100" || true)
 
-    if [[ "$pages_status" == '200' ]] && SITE_PAGES_FILE="$ARTIFACT_DIR/evidence/site-pages.json" node <<'NODE'
+    if [[ "$pages_status" == '200' ]] && \
+        SITE_PAGES_FILE="$ARTIFACT_DIR/evidence/site-pages.json" node <<'NODE'
 const fs = require('node:fs');
 const response = JSON.parse(fs.readFileSync(process.env.SITE_PAGES_FILE, 'utf8'));
-if (!(response.items ?? []).some((item) => item.name === 'Home')) {
-    process.exit(1);
-}
+process.exit((response.items ?? []).some((item) => item.name === 'Home') ? 0 : 1);
 NODE
     then
         break
@@ -211,10 +238,6 @@ NODE
 
     sleep 5
 done
-
-if [[ "$pages_status" != '200' ]]; then
-    fail "Unable to read Site Pages; HTTP $pages_status"
-fi
 
 SITE_PAGES_FILE="$ARTIFACT_DIR/evidence/site-pages.json" node <<'NODE'
 const fs = require('node:fs');
@@ -232,7 +255,7 @@ runtime_paths=(
     '/o/nexcent-landing-elements/index.js'
 )
 
-for attempt in $(seq 1 180); do
+for attempt in $(seq 1 240); do
     runtime_ready=false
 
     for path in "${runtime_paths[@]}"; do
@@ -315,6 +338,7 @@ Node: 20.19.0
 
 Verified:
 - clean DXP 2026.Q2.8 bootstrap
+- company creation before company-scoped deployment
 - complete Gradle workspace deployment
 - Site Initializer autoprovisioning
 - Nexcent Landing Master and Home page creation
