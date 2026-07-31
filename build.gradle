@@ -1,3 +1,6 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
 // Check GETTING_STARTED.md for information regarding usage.
 
 node {
@@ -13,14 +16,34 @@ def fragmentPackageFile = fragmentProjectDir.toPath()
 	.toFile()
 def objectsBatchDir = file("client-extensions/nexcent-objects/batch")
 def siteInitializerProjectDir = file("client-extensions/nexcent-site-initializer")
+def siteInitializerContentSeedFile = new File(
+	siteInitializerProjectDir, "src/content-seed.json")
 def siteInitializerSourceDir = new File(siteInitializerProjectDir, "src/site-initializer")
 def siteInitializerBuildDir = new File(siteInitializerProjectDir, "build/site-initializer")
 def themeStyleBookDir = file(
 	"client-extensions/nexcent-theme/style-book/nexcent-default")
 
+def cdata = { Object value ->
+	String stringValue = String.valueOf(value ?: "")
+
+	if (stringValue.contains("]]>") ) {
+		throw new GradleException("Journal field values cannot contain ]]>.")
+	}
+
+	return stringValue
+}
+
+def journalInstanceId = { String articleId, String fieldName ->
+	String value = Integer.toUnsignedString(
+		(articleId + ":" + fieldName).hashCode(), 36)
+
+	return value.padLeft(8, '0').take(8)
+}
+
 tasks.register("prepareNexcentSiteInitializer") {
 	inputs.dir(fragmentProjectDir.toPath().resolve("fragments").toFile())
 	inputs.dir(objectsBatchDir)
+	inputs.file(siteInitializerContentSeedFile)
 	inputs.dir(siteInitializerSourceDir)
 	inputs.dir(themeStyleBookDir)
 	outputs.dir(siteInitializerBuildDir)
@@ -59,6 +82,49 @@ tasks.register("prepareNexcentSiteInitializer") {
 			into(new File(
 				siteInitializerBuildDir,
 				"style-books/nexcent-default"))
+		}
+
+		def contentSeed = new JsonSlurper().parse(
+			siteInitializerContentSeedFile)
+		def journalArticlesDir = new File(
+			siteInitializerBuildDir, "journal-articles")
+
+		journalArticlesDir.mkdirs()
+
+		contentSeed.articles.each { article ->
+			String articleId = String.valueOf(article.id)
+			File metadataFile = new File(
+				journalArticlesDir, articleId + ".json")
+			File contentFile = new File(
+				journalArticlesDir, articleId + ".xml")
+
+			metadataFile.text = JsonOutput.prettyPrint(JsonOutput.toJson([
+				ddmStructureKey: article.ddmStructureKey,
+				name: article.name,
+			])) + System.lineSeparator()
+
+			StringBuilder xml = new StringBuilder()
+
+			xml.append('<?xml version="1.0"?>\n\n')
+			xml.append(
+				'<root available-locales="en_US" default-locale="en_US" version="1.0">\n')
+
+			article.fields.each { String fieldName, Object fieldValue ->
+				xml.append('\t<dynamic-element field-reference="')
+				xml.append(fieldName)
+				xml.append('" index-type="text" instance-id="')
+				xml.append(journalInstanceId(articleId, fieldName))
+				xml.append('" name="')
+				xml.append(fieldName)
+				xml.append('" type="text">\n')
+				xml.append('\t\t<dynamic-content language-id="en_US"><![CDATA[')
+				xml.append(cdata(fieldValue))
+				xml.append(']]></dynamic-content>\n')
+				xml.append('\t</dynamic-element>\n')
+			}
+
+			xml.append('</root>\n')
+			contentFile.text = xml.toString()
 		}
 	}
 }
