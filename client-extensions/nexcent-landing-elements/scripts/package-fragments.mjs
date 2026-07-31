@@ -19,7 +19,7 @@ const outputDirectory = path.join(projectDirectory, 'build', 'fragments');
 const outputPath = path.join(outputDirectory, 'collections-nexcent-components.zip');
 const collectionKey = 'nexcent-components';
 const deployDescriptor = {
-    companyWebId: process.env.NEXCENT_FRAGMENTS_COMPANY_WEB_ID || 'nextcen.com',
+    companyWebId: process.env.NEXCENT_FRAGMENTS_COMPANY_WEB_ID || 'nexcent.com',
     groupKey: process.env.NEXCENT_FRAGMENTS_GROUP_KEY || 'Next Gen Site',
 };
 
